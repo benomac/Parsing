@@ -11,11 +11,8 @@ case class StockKeepingunit(itemName: String, price: BigDecimal, amount: Int, fo
 case class StockKeepingUnitWithOption(itemName: String, price: BigDecimal, discount:
 Option[Discount])
 
-//val skuListParser: Parser[List[String]] = {
-//
-//}
 
-val skuItemParser: Parser[StockKeepingunit] = {
+val skuItemParser: Parser[StockKeepingUnitWithOption] = {
   val comma = char(',')
   val multiDigitStop = digit.rep.string.map(_.toInt) <* char('.')
   val doubleDigit = digit ~ digit
@@ -24,24 +21,32 @@ val skuItemParser: Parser[StockKeepingunit] = {
     (alpha <* comma)
       ~ (multiDigitStop ~ doubleDigit)
       ~ comma
-      ~ (digit <* comma)
-      ~ (multiDigitStop ~ doubleDigit) | none
-
+      ~ ((digit <* comma) ~ (multiDigitStop ~ doubleDigit) | none)
     ).string.map(_.split(",").toList match {
-      case List(name, price, specialPrice, amountForSpecialPrice) => (name, price, specialPrice, amountForSpecialPrice)
-        StockKeepingunit(
-          name,
-          BigDecimal.valueOf(price.toDouble),
-          specialPrice.toInt,
-          BigDecimal.valueOf(amountForSpecialPrice.toDouble))
-    }
+    case List(name, price, specialPrice, amountForSpecialPrice) => (name, price, specialPrice, amountForSpecialPrice)
+      StockKeepingUnitWithOption(
+        name,
+        BigDecimal.valueOf(price.toDouble),
+        Some(Discount(specialPrice.toInt, BigDecimal.valueOf(amountForSpecialPrice.toDouble))))
+    case List(name, price, none) => (name, price, none)
+      StockKeepingUnitWithOption(
+        name,
+        BigDecimal.valueOf(price.toDouble),
+        None)
+
+  }
   )
 }
 
-val c: Product = skuItemParser.parse("a,00000.10,1,0.00") match {
-  case Left(v) => v
-  case Right(v) => v._2
-}
+  val c: Product = skuItemParser.parse("a,00000.10,1,00.00") match {
+    case Left(v) => v
+    case Right(v) => v._2
+  }
+
+  val d: Product = skuItemParser.parse("a,00000.10,none") match {
+    case Left(v) => v
+    case Right(v) => v._2
+  }
 
 
 
